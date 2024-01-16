@@ -1,14 +1,9 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * Generated with the TypeScript template
- * https://github.com/react-native-community/react-native-template-typescript
- *
- * @format
- */
-
-import React, {type PropsWithChildren} from 'react';
+import React, {
+  useCallback,
+  type PropsWithChildren,
+  useEffect,
+  useState,
+} from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -26,6 +21,12 @@ import {
   LearnMoreLinks,
   ReloadInstructions,
 } from 'react-native/Libraries/NewAppScreen';
+import {
+  getDBConnection,
+  createTable,
+  getTodoItems,
+  saveTodoItems,
+} from './utils/database/services';
 
 const Section: React.FC<
   PropsWithChildren<{
@@ -63,6 +64,37 @@ const App = () => {
   const backgroundStyle = {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
   };
+
+  const [todos, setTodos] = useState<any>(null);
+
+  const loadDataCallback = useCallback(async () => {
+    try {
+      const initTodos = [
+        {id: 0, value: 'go to shop'},
+        {id: 1, value: 'eat at least a one healthy foods'},
+        {id: 2, value: 'Do some exercises'},
+      ];
+      const db = await getDBConnection();
+      await createTable(db);
+      const storedTodoItems = await getTodoItems(db);
+      if (storedTodoItems.length) {
+        setTodos(storedTodoItems);
+        const retrivedItems = await getTodoItems(db);
+        console.log('retrivedItems', retrivedItems);
+      } else {
+        await saveTodoItems(db, initTodos);
+        setTodos(initTodos);
+        const retrivedItems = await getTodoItems(db);
+        console.log('retrivedItems', retrivedItems);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadDataCallback();
+  }, [loadDataCallback]);
 
   return (
     <SafeAreaView style={backgroundStyle}>
