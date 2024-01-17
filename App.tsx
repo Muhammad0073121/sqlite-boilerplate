@@ -5,6 +5,7 @@ import React, {
   useState,
 } from 'react';
 import {
+  Image,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -27,6 +28,7 @@ import {
   getTodoItems,
   saveTodoItems,
 } from './utils/database/services';
+import RNFetchBlob from 'rn-fetch-blob';
 
 const Section: React.FC<
   PropsWithChildren<{
@@ -65,28 +67,41 @@ const App = () => {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
   };
 
+  let initTodos: any = [];
+  let imagePath: any = null;
+
   const [todos, setTodos] = useState<any>(null);
+  const [base64Icon, setBase64Icon] = useState<any>(null);
 
   const loadDataCallback = useCallback(async () => {
+    for (let i = 1; i < 8; i++) {
+      await RNFetchBlob.config({
+        fileCache: true,
+      })
+        .fetch(
+          'GET',
+          `https://dev.upworkdeveloper.com/new/alif-laila/storage/media/books/pages/book_74/page.${1}.jpg`,
+        )
+        .then(resp => {
+          imagePath = resp.path();
+          return resp.readFile('base64');
+        })
+        .then(async (base64Data: any) => {
+          const db = await getDBConnection();
+          saveTodoItems(db, [{id: i, value: base64Data}]);
+        });
+    }
     try {
-      const initTodos = [
-        {id: 0, value: 'go to shop'},
-        {id: 1, value: 'eat at least a one healthy foods'},
-        {id: 2, value: 'Do some exercises'},
-      ];
       const db = await getDBConnection();
       await createTable(db);
       const storedTodoItems = await getTodoItems(db);
       if (storedTodoItems.length) {
         setTodos(storedTodoItems);
-        const retrivedItems = await getTodoItems(db);
-        console.log('retrivedItems', retrivedItems);
       } else {
         await saveTodoItems(db, initTodos);
         setTodos(initTodos);
-        const retrivedItems = await getTodoItems(db);
-        console.log('retrivedItems', retrivedItems);
       }
+      setBase64Icon(storedTodoItems[3].value);
     } catch (error) {
       console.error(error);
     }
@@ -115,7 +130,10 @@ const App = () => {
             screen and then come back to see your edits.
           </Section>
           <Section title="See Your Changes">
-            <ReloadInstructions />
+            <Image
+              style={{width: 50, height: 50}}
+              source={{uri: `data:image/png;base64,${base64Icon}`}}
+            />
           </Section>
           <Section title="Debug">
             <DebugInstructions />
